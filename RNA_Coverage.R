@@ -3,15 +3,7 @@ library(ggplot2)
 library(data.table)
 library(RODBC)
 
-#USING FU DATA
-hist(test$V2)
-df_2K = subset(test,V2<3000&V2>2000)
-
-df_plot = data.frame(Mean=colMeans(df_2K[3:22]),
-                     Std=colSds(as.matrix(df_2K[3:22])))
-write.table(df_2K,"df_2K.txt")
-
-#SAMTOOLS DEPTH FILE
+#USING SAMTOOLS DEPTH FILE
 dt_depth = data.table(depth)
 colnames(dt_depth) = c("transc","pos","depth")
 
@@ -37,11 +29,3 @@ dt_bined_2K_plot = dt_bined_2K[,list(M=mean(bin_DP),
 ggplot(dt_bined_2K_plot,aes(x=binID,y=M))+
   geom_line()+
   geom_errorbar(aes(ymin=M-S,ymax=M+S))
-
-
-divide20 = function(df_data,length,total){
-  df_data$V4=as.integer(df_data$V2*20/(length+20)+1)
-  return(df_data)
-}
-
-divide20(dt_depth[V1=="NM_001001806"],3535,293744)
