@@ -3,7 +3,7 @@ library(ggplot2)
 library(data.table)
 library(RODBC)
 
-#IMPORTING SAMTOOLS DEPTH FILE
+#IMPORTING SAMTOOLS DEPTH FILE (samtools depth BWA_MAP2Refseq.bam > depth.txt)
 depth <- read.table("E:/PATH/TO/DepthFILE", quote="\"")
 dt_depth = data.table(depth)
 colnames(dt_depth) = c("transc","pos","depth")
