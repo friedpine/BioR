@@ -1,0 +1,21 @@
+{
+    "contents" : "",
+    "created" : 1408375212576.000,
+    "dirty" : false,
+    "encoding" : "",
+    "folds" : "",
+    "hash" : "0",
+    "id" : "84317224",
+    "lastKnownWriteTime" : 7741240722073845761,
+    "path" : null,
+    "properties" : {
+        "caption" : "merged",
+        "contentUrl" : "content?title=merged&file=2187d3f3acfb4067851ab24f1832893e.htm",
+        "displayedObservations" : 53,
+        "displayedVariables" : 13,
+        "totalObservations" : 53,
+        "variables" : 13
+    },
+    "source_on_save" : false,
+    "type" : "r_dataframe"
+}

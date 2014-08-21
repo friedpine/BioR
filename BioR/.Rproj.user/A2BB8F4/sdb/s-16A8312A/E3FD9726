@@ -1,0 +1,16 @@
+{
+    "contents" : "library(RODBC)\nGEO_samples <- read.delim(\"E:/bdyun/00.lab/31.cRNA/samples/GEO_samples_2.txt\",header=F)\nGEO_samples$names = gsub(\".R1.fastq.gz\",\"\",GEO_samples$V4)\nGEO_fq1 = subset(GEO_samples,V2==\"fq1\" | V2==\"raw_fq1\")\n\n\nlibrary(RODBC)\nchannel <- odbcConnect(\"p00\", uid=\"root\", pwd=\"123456\")\n\nsamples = sqlQuery(channel,\"select * from p01.samples\")\nmerged = merge(samples,GEO_fq1,by.x=\"exp\",by.y=\"V1\")\ncolnames(merged) = c(colnames(merged)[1:12],\"GEO_name\") \nsqlUpdate(channel,merged[,c(1:8,13)],tablename=\"p01.samples\")\n\nsamples = sqlQuery(channel,\"select * from p01.samples where length(geo_name)>2\")\n\n#HEK_CELLS\nFPKM_super_HEK = sqlQuery(channel,\"select * from p01.HEK_FPKM_gencode\")\nfor (i in colnames(FPKM_super_HEK)[4:21]){\n  geo_name = subset(samples,exp==i)[1,9]\n  tmp = FPKM_super_HEK[,c(\"gene\",\"cat\",\"genename\",i)]\n  colnames(tmp) = c(\"ENSEMBL_ID\",\"category\",\"gene_name\",\"FPKM\")\n  write.table(x=tmp,file=paste(geo_name,\"_FPKM_gencode.txt\",sep=\"\"))\n}\n\nFPKM_super_mouse = sqlQuery(channel,\"select * from p01.p01_FPKM\")\nfor (i in colnames(FPKM_super_mouse)[5:56]){\n  geo_name = subset(samples,exp==i)[1,9]\n  tmp = FPKM_super_mouse[,c(\"genename\",i)]\n  colnames(tmp) = c(\"gene_name\",\"FPKM\")\n  write.table(x=tmp,file=paste(geo_name,\"_FPKM_gencode.txt\",sep=\"\"))\n}\n\n",
+    "created" : 1408342821313.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2013561350",
+    "id" : "E3FD9726",
+    "lastKnownWriteTime" : 1408415268,
+    "path" : "~/GitHub/BioR/BioR/SUPER_SEQ_SAMPLES.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "source_on_save" : false,
+    "type" : "r_source"
+}
