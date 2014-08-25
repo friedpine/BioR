@@ -1,0 +1,16 @@
+{
+    "contents" : "library(data.table)\nlibrary(RODBC)\n\nSNV_finder = function(channel,samples,control_id,control_type,tablename,target_tables,depth,target_depth){\n  controls = samples[control_id]\n  targets = samples[-control_id]\n  samples_DP = paste(\",\",samples,\"_DP\",sep=\"\",collapse=\"\")\n  sql_head = paste(\"select chr,pos,Ref,Alt,Qual,DP,DP_alt\",samples_DP,\" from\",tablename,\"where\",sep=\" \")    \n  cond_depth = paste(samples,\"_DP>=\",depth,\" and \",sep=\"\",collapse = '')\n  cond_control_type = paste(controls,\"_G = '\",control_type,\"' and \",sep=\"\",collapse = '')\n  cond_control_qual = paste(\"(\",controls,\"_GQ>95 or \",controls,\"_GQ>3*\",controls,\"_DP) and \",sep=\"\",collapse = '')\n  sql_command = gsub(\" and $\",\";\",paste(sql_head,cond_depth,cond_control_type,cond_control_qual))\n  SNV_Depth_Ctrl_Type = sqlQuery(channel,sql_command)\n  SNV_Depth_Ctrl_Type$POS = paste(as.character(SNV_Depth_Ctrl_Type$chr),SNV_Depth_Ctrl_Type$pos,sep=\":\")\n  INFO_Targets = list()\n  \n  \n  return(SNV_Depth_Ctrl_Type)\n}\n\n",
+    "created" : 1408934969222.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2796194422",
+    "id" : "35F1F572",
+    "lastKnownWriteTime" : 1408952395,
+    "path" : "~/GitHub/BioR/BioR/SNV_analysis.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "source_on_save" : true,
+    "type" : "r_source"
+}

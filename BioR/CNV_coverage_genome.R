@@ -40,4 +40,15 @@ noise_distraction_plot = function(datas,level,filename){
 }
 
 
+sample_divided_by_ref_plot = function(datas,ymax,filename){
+  mean1 = mean(datas[,3]) 
+  mean2 = mean(datas[,4])
+  datas[,3] = datas[,3]*(1000/mean1)
+  datas[,4] = datas[,4]*(1000/mean2)
+  datas2 = datas[,1:2]
+  datas2$counts = (datas[,3]+100)/(datas[,4]+100)*2
+  datas2$counts_p = pmin(datas2$counts,ymax)
+  plot_genomes_single(datas2,ymax,0,ymax,filename)
+}
+
 
