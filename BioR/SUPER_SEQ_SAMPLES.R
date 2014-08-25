@@ -24,7 +24,7 @@ for (i in colnames(FPKM_super_HEK)[4:21]){
 }
 
 FPKM_super_mouse = sqlQuery(channel,"select * from p01.p01_FPKM")
-for (i in colnames(FPKM_super_mouse)[5:56]){
+for (i in colnames(FPKM_super_mouse)[52:56]){
   geo_name = subset(samples,exp==i)[1,9]
   tmp = FPKM_super_mouse[,c("genename",i)]
   colnames(tmp) = c("gene_name","FPKM")
