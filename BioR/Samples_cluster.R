@@ -28,7 +28,9 @@ sample_cluster_plot = function(PCA_scores,clustering_data,filename){
   pdf(filename)
   print(ggplot(PCA_scores,aes(PC1,PC2,color=type))+
     geom_point(size=5))
+  heat_data = as.matrix(clustering_data)
+  dd <- as.dendrogram(hclust(as.dist((1 - cor(t(heat_data)))/2)))
   heatmap.2(as.matrix(clustering_data),dendrogram="both",
-                  scale="row",density.info='none',col=bluered(100),trace='none')
+                  scale="row",density.info='none',Rowv=dd,col=bluered(100),trace='none')
   dev.off()
 }
