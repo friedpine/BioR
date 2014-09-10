@@ -51,4 +51,23 @@ sample_divided_by_ref_plot = function(datas,ymax,filename){
   plot_genomes_single(datas2,ymax,0,ymax,filename)
 }
 
+multi_samples_plot = function(channel,samples,table_name,filename_pre){
+  for (sample in samples){
+    datas = sqlQuery(channel,paste("select chr,bin_id,",sample," as counts from ",table_name,sep=""))
+    mean_count = mean(datas$counts)
+    datas$counts_p = pmin(datas$counts,mean_count*2)
+    plot_genomes_single(datas,mean_count*2,0,mean_count*2,paste(filename_pre,"_",sample,".pdf",sep=""))
+  }
+}
+
+multi_samples_plot_divided_by_ref = function(channel,samples,ref_samples,table_name,filename_pre){
+  for (sample in samples){
+    ref_sample = ref_samples[which(samples==sample)]
+    datas = sqlQuery(channel,paste("select chr,bin_id,",sample,",",ref_sample," from ",table_name,sep=""))
+    sample_divided_by_ref_plot(datas,4,paste(filename_pre,"_",sample,".pdf",sep=""))
+  }  
+}
+
+
+
 
