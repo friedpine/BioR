@@ -1,0 +1,16 @@
+{
+    "contents" : "library(ggplot2)\nlibrary(gridExtra)\n\nplot_genomes_single = function(datas,xmax,ymin,ymax,filename){\n  pdf(file=filename,width=10,height=15)\n  print(\n    ggplot(datas, aes(bin_id,counts_p,color=chr)) +\n      geom_line() +\n      geom_abline(intercept=mean(datas$counts_p),slope=0)+\n      facet_grid(chr ~ .) +\n      ggtitle(\"NO_AMPLIFICATION_CNV\")+\n      ylim(ymin,ymax))\n  #USING_POINTS\n  print(\n    ggplot(datas, aes(bin_id,counts_p,color=chr)) +\n      geom_point(size=1) +\n      geom_abline(intercept=mean(datas$counts_p),slope=0)+\n      facet_grid(chr ~ .) +\n      ggtitle(\"NO_AMPLIFICATION_CNV\")+\n      ylim(ymin,ymax))\n  #USING_HIST\n  print(\n    ggplot(datas, aes(counts,fill=chr)) +\n      geom_histogram(binwidth = xmax/100) +\n      facet_grid(chr ~ .) +\n      ggtitle(\"NO_AMPLIFICATION_CNV\")+\n      xlim(0,xmax))\n  dev.off()\n}\n\nnoise_distraction_plot = function(datas,level,filename){\n  mean1 = mean(datas[,3]) \n  mean2 = mean(datas[,4])\n  datas[,3] = datas[,3]*(1000/mean1)\n  datas[,4] = datas[,4]*(1000/mean2)\n  datas2 = datas[,1:2]\n  datas2$counts = datas[,3]-datas[,4]\n  datas2$counts_p = pmin(datas2$counts,level*2)\n  plot_genomes_single(datas2,2500,-2000,2000,filename)\n}\n\n\nsample_divided_by_ref_plot = function(datas,ymax,filename){\n  mean1 = mean(datas[,3]) \n  mean2 = mean(datas[,4])\n  datas[,3] = datas[,3]*(1000/mean1)\n  datas[,4] = datas[,4]*(1000/mean2)\n  datas2 = datas[,1:2]\n  datas2$counts = (datas[,3]+100)/(datas[,4]+100)*2\n  datas2$counts_p = pmin(datas2$counts,ymax)\n  plot_genomes_single(datas2,ymax,0,ymax,filename)\n}\n\n\n",
+    "created" : 1408938050190.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2536278688",
+    "id" : "9D0F1EBC",
+    "lastKnownWriteTime" : 1408940326,
+    "path" : "~/GitHub/BioR/BioR/CNV_coverage_genome.R",
+    "properties" : {
+        "tempName" : "Untitled1"
+    },
+    "source_on_save" : true,
+    "type" : "r_source"
+}

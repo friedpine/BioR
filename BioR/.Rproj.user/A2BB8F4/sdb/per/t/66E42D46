@@ -1,0 +1,15 @@
+{
+    "contents" : "library(RODBC)\n\n#INPUT1: files lists and informations file (path & size)\n#INPUT2: files lists RAW_sample names and official names maybe other infos(rawname & sample)\n\nfastq_file_lists = function(samples,files,types){\n  files = files[,c(5,9)]\n  colnames(files) = c(\"size\",\"path\")\n  files$rawname = ldply(strsplit(as.character(files$path),\"/\"),function(x) x[length(x)-1])[,1]\n  files$type = types\n  merged = merge(files,samples,by=\"rawname\")\n  df_up = data.frame(sample=merged$sample,type=merged$type,\n                    path=merged$path,method=\"A\",total_reads=10000000)\n  return(df_up)\n}\n\n#channel <- odbcConnect(\"IBM\", uid=\"root\", pwd=\"123456\")\n\n#FUCTION: Save the lists of samples to the database!\n#Requirement: \nfastq_to_database = function(channel,database,table,data){\ntable = paste(database,\".\",table,sep=\"\")\nsql = paste(\"CREATE TABLE \",table,\" (\n  `sample` varchar(255) DEFAULT NULL,\n  `type` varchar(255) DEFAULT NULL,\n  `path` varchar(1000) DEFAULT NULL,\n  `size` double DEFAULT NULL,\n  `method` text,\n  UNIQUE KEY `u` (`sample`,`type`))\",sep=\"\")\nshow_tables = sqlTables(channel,catalog=database)\nif (!(table %in% show_tables$TABLE_NAME)){sqlQuery(channel,sql)}\ndf_upload = data[,c(\"sample\",\"type\",\"path\",\"size\")]\ndf_upload$method = \"NA\"\nsqlSave(channel,dat=df_upload,tablename=table,append=T,rownames=F,colnames=F)\n#Sreturn(df_upload)\n} \n\n\n\n\n",
+    "created" : 1410244712473.000,
+    "dirty" : false,
+    "encoding" : "UTF-8",
+    "folds" : "",
+    "hash" : "2194149527",
+    "id" : "66E42D46",
+    "lastKnownWriteTime" : 1410267633,
+    "path" : "~/GitHub/BioR/BioR/Samples_files_management.R",
+    "properties" : {
+    },
+    "source_on_save" : true,
+    "type" : "r_source"
+}
