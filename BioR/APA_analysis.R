@@ -53,6 +53,58 @@ Genes_with_multiple_APAs = function(channel,apas,table){
   sqlSave(channel,dat=out,tablename=table,append=F,rownames=F,colnames=F)
 }
 
+Gene_multi_heatmap = function(channel,tablename,near_col,dist_col,exp_cut,sample_low,filename){
+  library(gplots)
+  data = sqlQuery(channel,paste("select * from",tablename))
+  data_sum = data[,dist_col]+data[,near_col]
+  data_sum_cut = rowSums(data_sum>=exp_cut)>=sample_low
+  distal_by_near = data[,dist_col]/(data[,near_col]+1)
+#  distal_by_near = data[,near_col]/(data[,dist_col]+1)
+  print(distal_by_near[1:10,])
+  distal_by_near_log10 = log10(distal_by_near+0.01)
+  heatdata = distal_by_near_log10[data_sum_cut,]
+  print(heatdata)
+  pdf(filename)
+  #dd <- as.dendrogram(hclust(as.dist((1 - cor(t(heatdata)))/2)))
+  #heatmap.2(as.matrix(heatdata),dendrogram="row",scale="row",density.info='none',Colv=FALSE,Rowv=dd,col=bluered(100),trace='none')
+  heatmap.2(as.matrix(heatdata),dendrogram="row",scale="row",density.info='none',Colv=FALSE,col=bluered(100),trace='none')
+  dev.off()
+}
+
+Gene_multi_heatmap2 = function(channel,data,near_col,dist_col,exp_cut,sample_low,filename){
+  library(gplots)
+  data_sum = data[,dist_col]+data[,near_col]
+  data_sum_cut = rowSums(data_sum>=exp_cut)>=sample_low
+  distal_by_near = data[,dist_col]/(data[,near_col]+1)
+  print(distal_by_near[1:10,])
+  distal_by_near_log10 = log10(distal_by_near+0.01)
+  heatdata = distal_by_near_log10[data_sum_cut,]
+  pdf(filename)
+  #dd <- as.dendrogram(hclust(as.dist((1 - cor(t(heatdata)))/2)))
+  #heatmap.2(as.matrix(heatdata),dendrogram="row",scale="row",density.info='none',Colv=FALSE,Rowv=dd,col=bluered(100),trace='none')
+  heatmap.2(as.matrix(heatdata),dendrogram="row",scale="row",density.info='none',Colv=FALSE,col=bluered(100),trace='none')
+  dev.off()
+}
+
+Gene_multi_density_by_species = function(channel,data,near_col,dist_col,sample_names,sample_table,low_cut,high_cut,filename){
+  library(ggplot2)
+  library(reshape2)
+  samples = sqlQuery(channel,paste("select sample,type from",sample_table))
+  data_sum = data[,dist_col]+data[,near_col]
+  distal_by_near = data[,dist_col]/(data[,near_col]+1)
+  colnames(data_sum) = sample_names
+  colnames(distal_by_near) = sample_names
+  melt_data_sum = melt(data_sum)
+  melt_distal_by_near = melt(distal_by_near)
+  melt_dbn = melt_distal_by_near[melt_data_sum$value>low_cut,]
+  melt_dbn = merge(melt_dbn,samples,by.x="variable",by.y="sample")
+  melt_dbn$log_data = pmax(log10(melt_dbn$value),-2)
+  return(melt_dbn)
+#  ggplot(melt_dbn,aes())+
+#    geom_density()+
+#    xlim(-2,4)
+}
+
 
 
 
