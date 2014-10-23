@@ -53,6 +53,21 @@ Genes_with_multiple_APAs = function(channel,apas,table){
   sqlSave(channel,dat=out,tablename=table,append=F,rownames=F,colnames=F)
 }
 
+Genes_multi_distal_by_near = function(channel,data,near_col,dist_col,sample_names,sample_table,low_cut){
+  library(ggplot2)
+  library(reshape2)
+  samples = sqlQuery(channel,paste("select sample,type from",sample_table))
+  data_sum = data[,dist_col]+data[,near_col]
+  distal_by_near = data[,dist_col]/(data[,near_col]+1)
+  colnames(data_sum) = sample_names
+  colnames(distal_by_near) = sample_names
+  melt_data_sum = melt(data_sum)
+  melt_distal_by_near = melt(distal_by_near)
+  melt_dbn = melt_distal_by_near[melt_data_sum$value>low_cut,]
+  melt_dbn = merge(melt_dbn,samples,by.x="variable",by.y="sample")
+  return(melt_dbn)
+}
+
 Gene_multi_heatmap = function(channel,tablename,near_col,dist_col,exp_cut,sample_low,filename){
   library(gplots)
   data = sqlQuery(channel,paste("select * from",tablename))
@@ -85,6 +100,33 @@ Gene_multi_heatmap2 = function(channel,data,near_col,dist_col,exp_cut,sample_low
   heatmap.2(as.matrix(heatdata),dendrogram="row",scale="row",density.info='none',Colv=FALSE,col=bluered(100),trace='none')
   dev.off()
 }
+
+#dbn are from function: Genes_multi_distal_by_near
+Gene_multi_density_low_distal_usage = function(dbn,low_level,cell_types,filename){
+  library(data.table)
+  library(ggplot2)
+  dt_dbn = data.table(dbn)
+  df = dt_dbn[,list(total=length(value),low_distal=sum(value<low_level),type=type[1]),by=variable]
+  df$ratio = df$low_distal/df$total
+  df$cell_type =  factor(df$type,levels=cell_types)
+  pdf(filename)
+  print(ggplot(df,aes(x=cell_type,y=ratio,group=cell_type))+geom_boxplot()+ylim(0,0.6))
+  dev.off()
+}
+
+Gene_multi_density_high_distal_usage = function(dbn,low_level,cell_types,filename){
+  library(data.table)
+  library(ggplot2)
+  dt_dbn = data.table(dbn)
+  df = dt_dbn[,list(total=length(value),low_distal=sum(value>low_level),type=type[1]),by=variable]
+  df$ratio = df$low_distal/df$total
+  df$cell_type =  factor(df$type,levels=cell_types)
+  pdf(filename)
+  print(ggplot(df,aes(x=cell_type,y=ratio,group=cell_type))+geom_boxplot()+ylim(0,0.4))
+  dev.off()
+}
+
+
 
 Gene_multi_density_by_species = function(channel,data,near_col,dist_col,sample_names,sample_table,low_cut,high_cut,filename){
   library(ggplot2)

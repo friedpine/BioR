@@ -31,8 +31,9 @@ show_tables = sqlTables(channel,catalog=database)
 if (!(table %in% show_tables$TABLE_NAME)){sqlQuery(channel,sql)}
 df_upload = data[,c("sample","type","path","size")]
 df_upload$method = "NA"
+print(df_upload[1,])
 sqlSave(channel,dat=df_upload,tablename=table,append=T,rownames=F,colnames=F)
-#Sreturn(df_upload)
+#return(df_upload)
 } 
 
 
