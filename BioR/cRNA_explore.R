@@ -41,8 +41,6 @@ cRNA_sample_pairs_overlap = function(channel,event_table,samples1,samples2,filen
 	return(ddply(df_event,.(sample,event),summarize,sample=sample[1],event=event[1],count=sum(c)))
 }
 
-
-
 density_of_repeats = function(datalist,datanames,repeat_type){
 	df = data.frame(count=c(),len=c(),name=c())
 	for(x in 1:length(datanames)){
@@ -62,4 +60,36 @@ density_of_repeats = function(datalist,datanames,repeat_type){
 repeat_pairing_of_circRNA = function(datalist,repeat_type,total_circ){
 	dt_pairings = data[,list(),by=c("event")]		
 }
+
+intron_pair_blast_process = function(channel,introns_table,blast_table,out_table){
+	infos = sqlQuery(channel,paste("select * from ",introns_table,sep=""))
+	blast = sqlQuery(channel,paste("select * from ",blast_table,sep=""))
+	blast_infos = merge(blast,infos,by="event")
+	blast_infos$rc_in1_s = blast_infos$s_end+blast_infos$in1_s 
+	blast_infos$rc_in1_e = blast_infos$s_start+blast_infos$in1_s
+	blast_infos$rc_in2_s = blast_infos$in2_s+blast_infos$q_start
+	blast_infos$rc_in2_e = blast_infos$in2_s+blast_infos$q_end
+	sqlSave(channel,blast_infos[,c(1,4,5,6,7,12,13,14,15,18,23:26)],tablename=out_table,rownames=F,colnames=F)
+}
+
+#(channel,'mm_crna_explore.b3_rc_poses','mm_crna_explore.02_circ_left_intron_info_repeatmask','mm_crna_explore.02_circ_right_intron_info_repeatmask','mm_crna_explore.b4_rc_repeatmasks')
+intron_pair_blsat_to_repeat = function(channel,rc_table,in1_repeat,in2_repeat,out_table){
+	infos1 = sqlQuery(channel,paste("SELECT a.id,a.event,b.family as up_family,b.strand as up_strand FROM ",rc_table," a LEFT JOIN ",in1_repeat," b ON a.transc=b.transc AND a.rc_in1_s>b.start-25 AND a.rc_in1_e<b.end+25 GROUP BY id"))
+	infos2 = sqlQuery(channel,paste("SELECT a.id,b.family as down_family,b.strand as down_strand FROM ",rc_table," a LEFT JOIN ",in2_repeat," b ON a.transc=b.transc AND a.rc_in2_s>b.start-25 AND a.rc_in2_e<b.end+25 GROUP BY id"))
+	info_m = merge(infos1,infos2,by="id")
+	sqlSave(channel,info_m,tablename=out_table,rownames=F,colnames=F)
+	}
+
+intron_pair_ReverseComp_summ = function(channel,event_table,rc_blast_table,out_table){
+	sqlcmd1 = sprintf("select a.event,b.* from %s a left join %s b on a.event=b.event",event_table,rc_blast_table)
+	infos = sqlQuery(channel,sqlcmd1)
+	infos$cates = 'Others'
+	infos$cates[is.na(infos$id)] = "NO_RC"
+	infos$cates[!is.na(infos$up_family) & !is.na(infos$down_family)] = "RC_repeat"
+	infos$cates[is.na(infos$up_family) & is.na(infos$down_family) & !is.na(infos$id)] = "RC_Nonrepeat"
+	dt_info  = data.table(infos)
+	dt_summ = dt_info[,list(no_rc=sum(cates=="NO_RC"),rc_rep=sum(cates=="RC_repeat"),rc_norep=sum(cates=="RC_Nonrepeat")),by=c("event")]
+	sqlSave(channel,dt_summ,tablename=out_table,rownames=F,colnames=F)
+}
+
 
