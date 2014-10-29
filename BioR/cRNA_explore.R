@@ -20,7 +20,8 @@ cRNA_counts_and_gene_FPKM = function(channel,event_table,FPKM_table,sample_table
 	#return(df_event_FPKM)
 	dt_event_FPKM = data.table(df_event_FPKM)
 	dt_event_summ = dt_event_FPKM[,list(crna_reads=length(event),FPKM=FPKM[1]),by=c("gene","sample")]
-	return(dt_event_summ)
+	#return(dt_event_summ)
+	return(dt_event_FPKM)
 }
 
 cRNA_sample_pairs_overlap = function(channel,event_table,samples1,samples2,filename){
@@ -93,3 +94,52 @@ intron_pair_ReverseComp_summ = function(channel,event_table,rc_blast_table,out_t
 }
 
 
+intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repeat_down_table,repeat_joined_table,out_table){
+	sql1 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
+		FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_up_table,repeat_up_table)
+	sql2 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
+		FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_down_table,repeat_down_table)
+	
+	repeat_up_table='mm_crna_explore.02_circ_left_intron_info_repeatmask'
+	repeat_down_table='mm_crna_explore.02_circ_right_intron_info_repeatmask'
+	repeat_joined_table='mm_crna_explore.02_circ_rep_all'
+	sql1 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
+			FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_up_table,repeat_up_table)
+	sql2 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
+			FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_down_table,repeat_down_table)
+	events = sqlQuery(channel,"select * from mm_crna_explore.b1_introns_updown")
+	up_self = sqlQuery(channel,sql1)
+	down_self = sqlQuery(channel,sql2)
+
+	up_self$l_ex = up_self$in_id+1
+	up_self$dist = up_self$s2-up_self$e1
+	up_self_info = data.table(up_self[,c("transc","l_ex","dist")])
+	up_self_info_summ = up_self_info[,list(up_k1=sum(dist<1000),up_k2=sum(dist<2000),up_k5=sum(dist<5000)),by=c("transc","l_ex")]
+	down_self$r_ex = down_self$in_id
+	down_self$dist = down_self$s2-down_self$e1
+	down_self_info = data.table(down_self[,c("transc","r_ex","dist")])
+	down_self_info_summ = down_self_info[,list(down_k1=sum(dist<1000),down_k2=sum(dist<2000),down_k5=sum(dist<5000)),by=c("transc","r_ex")]
+
+	events_1 = merge(events,up_self_info_summ,all.x=T,by=c('transc','l_ex'))
+	events_2 = merge(events_1,down_self_info_summ,all.x=T,by=c('transc','r_ex'))
+
+	all_report2 = sqlQuery(channel,"SELECT * FROM mm_crna_explore.b1_introns_updown a, mm_crna_explore.02_circ_left_intron_info_repeatmask b,mm_crna_explore.02_circ_right_intron_info_repeatmask c 
+	                       WHERE a.`transc`=b.`transc` AND a.`transc`=c.`transc` AND a.`l_ex`=b.`in_id`+1 AND a.`r_ex`=c.`in_id` AND b.`family`=c.`family`")
+
+	all_report_sel2 = subset(all_report2,strand.1!=strand.2 & family %in% c("Alu","B2","B4"))
+	all_report_sel_dt = data.table(all_report_sel2[,c(1:10,22,17:19,31:33)])
+	
+	all_report_sel_dt$up_dist=0
+	all_report_sel_dt$down_dist=0
+	pos = all_report_sel_dt$strand=="+"
+	all_report_sel_dt$up_dist[pos]=(all_report_sel_dt$in1_e-all_report_sel_dt$end)[pos]
+	all_report_sel_dt$down_dist[pos]=(all_report_sel_dt$start.1-all_report_sel_dt$in2_s)[pos]
+	pos = all_report_sel_dt$strand=="-"
+	all_report_sel_dt$up_dist[pos]=(all_report_sel_dt$start-all_report_sel_dt$in1_s)[pos]
+	all_report_sel_dt$down_dist[pos]=(all_report_sel_dt$in2_e-all_report_sel_dt$end.1)[pos]
+
+	all_report_sel_dt=data.table(all_report_sel_dt)
+	all_report_sel_dt_summ = all_report_sel_dt[,list(RC_count=length(l_ex),min_up=min(up_dist),min_down=min(down_dist),min_all=min(up_dist+down_dist)),by=c("event")]
+	merged = merge(events_2[,c(4,1:3,5:16)],all_report_sel_dt_summ,all.x=T,by=c("event"))
+	sqlSave(channel,merged,"mm_crna_explore.b6_repeat_summ",rownames=F,colnames=F)
+}
