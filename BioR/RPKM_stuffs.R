@@ -23,13 +23,15 @@ scatter_corr = function(channel,sample_table,table,s1,s2,col_name,low_cut,filena
 
 #USING_LINEAR_REGRESSION_MODEL!
 esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_names,sample_ERCC_counts,filename){
-	sqlRPKM = paste("select genename,",toString(samples,sep=",")," from ",exp_table,sep="")
+	sqlRPKM = paste("select genename,",toString(samples_names,sep=",")," from ",exp_table,sep="")
 	sqlERCC = paste("select * from ",ERCC_detail,sep="")
 	data_exp = sqlQuery(channel,sqlRPKM)
 	data_ercc = sqlQuery(channel,sqlERCC)
 	data_exp_ercc = subset(data_exp,genename %in% data_ercc[,1])
 	data_exp_mRNA = subset(data_exp,!(genename %in% data_ercc[,1]))
-	out = list()
+	out = array()
+	print(data_exp_ercc[1,])
+	print(data_exp_mRNA[1,])
 #	pdf(filename)
 	for (x in 1:length(samples_names)){
 		sample = samples_names[x]
@@ -54,10 +56,12 @@ esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_
 		#print(colSums(df_ercc_count_exp[,2:6]))
 		print(sample)
 		print(colSums(new_mRNA))
+		out[x] = colSums(new_mRNA)[3]
 		#print(ggplot(df_ercc_count_exp,aes(log10exp,log10count))+
 		#  geom_point()+
 		#  geom_abline(intercept=model$coefficients[1],slope=model$coefficients[2])+
 		#  labs(title = sample,x="log10(RPKM)",y="log10(Molecular_count)"))		
 	}
+	return(data.frame(sample=samples_names,pred_count=out))
 	#dev.off()
 }

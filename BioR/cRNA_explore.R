@@ -114,11 +114,11 @@ intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repea
 	up_self$l_ex = up_self$in_id+1
 	up_self$dist = up_self$s2-up_self$e1
 	up_self_info = data.table(up_self[,c("transc","l_ex","dist")])
-	up_self_info_summ = up_self_info[,list(up_k1=sum(dist<1000),up_k2=sum(dist<2000),up_k5=sum(dist<5000)),by=c("transc","l_ex")]
+	up_self_info_summ = up_self_info[,list(updist_min=min(dist), up_k1=sum(dist<1000),up_k2=sum(dist<2000),up_k5=sum(dist<5000)),by=c("transc","l_ex")]
 	down_self$r_ex = down_self$in_id
 	down_self$dist = down_self$s2-down_self$e1
 	down_self_info = data.table(down_self[,c("transc","r_ex","dist")])
-	down_self_info_summ = down_self_info[,list(down_k1=sum(dist<1000),down_k2=sum(dist<2000),down_k5=sum(dist<5000)),by=c("transc","r_ex")]
+	down_self_info_summ = down_self_info[,list(downdist_min=min(dist),down_k1=sum(dist<1000),down_k2=sum(dist<2000),down_k5=sum(dist<5000)),by=c("transc","r_ex")]
 
 	events_1 = merge(events,up_self_info_summ,all.x=T,by=c('transc','l_ex'))
 	events_2 = merge(events_1,down_self_info_summ,all.x=T,by=c('transc','r_ex'))

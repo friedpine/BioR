@@ -109,7 +109,7 @@ average_by_multiSegs = function(data,infoids,colids,counts){
   return(out)
 }
 
-plot_data = function(data_in,colum_plot,filename_prefix){
+plot_norm_malbac_data = function(data_in,colum_plot,filename_prefix){
   dev.new()
   filename=paste(filename_prefix,"_",colnames(data_in)[colum_plot],".pdf",sep="")
   pdf(file=filename,width=10,height=15)
@@ -123,6 +123,21 @@ plot_data = function(data_in,colum_plot,filename_prefix){
   dev.off()
 }
 
+plot_norm_malbac_datas = function(data_in,colums_plot,filename){
+  #dev.new()
+  filename=paste(filename,".pdf",sep="")
+  pdf(file=filename,width=10,height=15)
+  for(x in colums_plot){
+  datas = data_in[,c(1,2,x)]
+  colnames(datas) = c("chr","bin_id","depth")
+  print(ggplot(datas,aes(bin_id,depth,color=chr)) +
+  geom_point(size=1) +
+  geom_abline(intercept=1,slope=0)+
+  facet_grid(chr ~ .) +
+  ylim(0,2)+
+  labs(title = colnames(data_in)[x]))}
+  dev.off()
+}
 
 
 
