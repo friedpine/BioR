@@ -69,7 +69,6 @@ multi_samples_plot_divided_by_ref = function(channel,samples,ref_samples,table_n
   }  
 }
 
-
 normalized_by_depth = function(data,infoids,colids){
   norm_factor = diag(length(data[,1])/colSums(data[,colids])) 
   norm_data = as.matrix(data[,colids]) %*% as.matrix(norm_factor)
@@ -137,6 +136,34 @@ plot_norm_malbac_datas = function(data_in,colums_plot,filename){
   ylim(0,2)+
   labs(title = colnames(data_in)[x]))}
   dev.off()
+}
+
+
+depth_corr_coef_matrix = function(data,low_cut,xlimit,plotfile){
+  samples = colnames(data)
+  counts = length(samples)
+  cormat = matrix(0,nrow=counts,ncol=counts)
+  colnames(cormat) = samples
+  rownames(cormat) = samples
+  pdf(plotfile)
+  for (x in seq(1,counts-1)){
+    for (y in seq(x+1,counts)){
+      data_exp = data[,c(x,y)]
+      data_nonzero = data_exp[rowSums(data_exp>low_cut)>0,]
+      cormat[x,y] = round(cor(data_nonzero[,1],data_nonzero[,2]),2)
+      cormat[y,x] = cormat[x,y]
+      title_name = paste(samples[x],samples[y],sep="_")
+      print(ggplot(data.frame(x=data_nonzero[,1],y=data_nonzero[,2]),aes(x,y))+
+        geom_point(size=1)+
+        xlim(xlimit[1],xlimit[2])+ylim(xlimit[1],xlimit[2])+
+        labs(title = title_name)
+        )
+    }
+    cormat[x,x] = 1
+  }
+  cormat[counts,counts] = 1
+  dev.off()
+  return(cormat)
 }
 
 

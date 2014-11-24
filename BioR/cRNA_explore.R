@@ -9,7 +9,9 @@ cRNA_counts_and_gene_FPKM = function(channel,event_table,FPKM_table,sample_table
 	sql2 = paste("select * from ",FPKM_table)
 	df_event = sqlQuery(channel,sql1)
 	df_FPKM = sqlQuery(channel,sql2)
-	print(df_event[1:5,])
+	print(sql1)
+	print(sql2)
+	print(df_event[,])
 	print(length(df_event[,1]))
 	df_FPKM = subset(df_FPKM,gene %in% df_event$gene)
 	df_FPKM = df_FPKM[,!(names(df_FPKM) %in%c("genename","cate","LENGTH"))]
@@ -19,9 +21,14 @@ cRNA_counts_and_gene_FPKM = function(channel,event_table,FPKM_table,sample_table
 	df_event_FPKM = merge(df_event,df_FPKM_melt,by=c("gene","exp"),all.x=T)
 	#return(df_event_FPKM)
 	dt_event_FPKM = data.table(df_event_FPKM)
-	dt_event_summ = dt_event_FPKM[,list(crna_reads=length(event),FPKM=FPKM[1]),by=c("gene","sample")]
+	dt_event_summ = dt_event_FPKM[,list(crna_reads=sum(total),FPKM=FPKM[1]),by=c("gene","sample")]
 	#return(dt_event_summ)
 	return(dt_event_FPKM)
+}
+
+cRNA_counts_gene_FPKM_join_other_infos = function(channel,counts_FPKM_table,infotable,event_exp_table,cut){
+	sql=sprintf("select a.*,b.*,c.total as TOTAL_READS from %s a join %s b join %s c on a.event=b.event and a.event=c.event where c.total>=%s",counts_FPKM_table,infotable,event_exp_table,cut)
+	print(sql)
 }
 
 cRNA_sample_pairs_overlap = function(channel,event_table,samples1,samples2,filename){
@@ -43,7 +50,7 @@ cRNA_sample_pairs_overlap = function(channel,event_table,samples1,samples2,filen
 }
 
 density_of_repeats = function(datalist,datanames,repeat_type){
-	df = data.frame(count=c(),len=c(),name=c())
+	df = data.frame(transc=c(),in_id=c(),count=c(),len=c(),name=c())
 	for(x in 1:length(datanames)){
 		dt = datalist[[x]]
 		sample = datanames[x]
@@ -53,7 +60,7 @@ density_of_repeats = function(datalist,datanames,repeat_type){
 		print(result[1:10,])
 		print(sample)
 		result$typename = sample
-		df = rbind(df,result[,3:5])} 
+		df = rbind(df,result[,1:5])} 
 	df$density = df$count*1000/df$len
 	return(df)
 }
@@ -70,7 +77,10 @@ intron_pair_blast_process = function(channel,introns_table,blast_table,out_table
 	blast_infos$rc_in1_e = blast_infos$s_start+blast_infos$in1_s
 	blast_infos$rc_in2_s = blast_infos$in2_s+blast_infos$q_start
 	blast_infos$rc_in2_e = blast_infos$in2_s+blast_infos$q_end
-	sqlSave(channel,blast_infos[,c(1,4,5,6,7,12,13,14,15,18,23:26)],tablename=out_table,rownames=F,colnames=F)
+	blast_infos = cbind(id=1:length(blast_infos[,1]),blast_infos)
+	#print(blast_infos[1,])
+	#print(blast_infos[1,c('id','event','identity','align_len','mismatches','gap','evalue','bit_score','transc','strand','chr','rc_in1_s','rc_in1_e','rc_in2_s','rc_in2_e')])
+	sqlSave(channel,blast_infos[,c('id','event','identity','align_len','mismatches','gap','evalue','bit_score','transc','strand','chr','rc_in1_s','rc_in1_e','rc_in2_s','rc_in2_e')],tablename=out_table,rownames=F,colnames=F)
 }
 
 #(channel,'mm_crna_explore.b3_rc_poses','mm_crna_explore.02_circ_left_intron_info_repeatmask','mm_crna_explore.02_circ_right_intron_info_repeatmask','mm_crna_explore.b4_rc_repeatmasks')
@@ -93,21 +103,13 @@ intron_pair_ReverseComp_summ = function(channel,event_table,rc_blast_table,out_t
 	sqlSave(channel,dt_summ,tablename=out_table,rownames=F,colnames=F)
 }
 
+intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repeat_down_table,out_table){
 
-intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repeat_down_table,repeat_joined_table,out_table){
-	sql1 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
-		FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_up_table,repeat_up_table)
-	sql2 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
-		FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_down_table,repeat_down_table)
-	
-	repeat_up_table='mm_crna_explore.02_circ_left_intron_info_repeatmask'
-	repeat_down_table='mm_crna_explore.02_circ_right_intron_info_repeatmask'
-	repeat_joined_table='mm_crna_explore.02_circ_rep_all'
 	sql1 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
 			FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_up_table,repeat_up_table)
 	sql2 = sprintf("SELECT a.transc,a.in_id,a.strand AS strand1,b.strand AS strand2,a.family,a.chr,a.start AS s1,a.end AS e1,b.start AS s2,b.end AS e2 
 			FROM %s a JOIN %s b ON a.transc=b.transc AND a.in_id=b.in_id AND a.family=b.family AND a.strand!=b.strand WHERE a.end<b.start",repeat_down_table,repeat_down_table)
-	events = sqlQuery(channel,"select * from mm_crna_explore.b1_introns_updown")
+	events = sqlQuery(channel,sprintf("select * from %s",event_table))
 	up_self = sqlQuery(channel,sql1)
 	down_self = sqlQuery(channel,sql2)
 
@@ -123,12 +125,12 @@ intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repea
 	events_1 = merge(events,up_self_info_summ,all.x=T,by=c('transc','l_ex'))
 	events_2 = merge(events_1,down_self_info_summ,all.x=T,by=c('transc','r_ex'))
 
-	all_report2 = sqlQuery(channel,"SELECT * FROM mm_crna_explore.b1_introns_updown a, mm_crna_explore.02_circ_left_intron_info_repeatmask b,mm_crna_explore.02_circ_right_intron_info_repeatmask c 
-	                       WHERE a.`transc`=b.`transc` AND a.`transc`=c.`transc` AND a.`l_ex`=b.`in_id`+1 AND a.`r_ex`=c.`in_id` AND b.`family`=c.`family`")
+	all_report2 = sqlQuery(channel,sprintf("SELECT a.*,b.start,b.end,b.strand,c.start,c.end,c.strand FROM %s a, %s b,%s c 
+	                       WHERE a.`transc`=b.`transc` AND a.`transc`=c.`transc` AND a.`l_ex`=b.`in_id`+1 AND a.`r_ex`=c.`in_id` AND b.`family`=c.`family`",event_table,repeat_up_table,repeat_down_table))
 
 	all_report_sel2 = subset(all_report2,strand.1!=strand.2 & family %in% c("Alu","B2","B4"))
-	all_report_sel_dt = data.table(all_report_sel2[,c(1:10,22,17:19,31:33)])
-	
+	#all_report_sel_dt = data.table(all_report_sel2[,c(1:10,22,17:19,31:33)])
+	#all_report_sel_dt = data.table(all_report_sel2[,c(1:11,23,18:20,32:34)])
 	all_report_sel_dt$up_dist=0
 	all_report_sel_dt$down_dist=0
 	pos = all_report_sel_dt$strand=="+"
@@ -141,5 +143,48 @@ intron_pair_repeat_analysis = function(channel,event_table,repeat_up_table,repea
 	all_report_sel_dt=data.table(all_report_sel_dt)
 	all_report_sel_dt_summ = all_report_sel_dt[,list(RC_count=length(l_ex),min_up=min(up_dist),min_down=min(down_dist),min_all=min(up_dist+down_dist)),by=c("event")]
 	merged = merge(events_2[,c(4,1:3,5:16)],all_report_sel_dt_summ,all.x=T,by=c("event"))
-	sqlSave(channel,merged,"mm_crna_explore.b6_repeat_summ",rownames=F,colnames=F)
+	sqlSave(channel,merged,out_table,rownames=F,colnames=F)
 }
+
+
+circ_splicing_site_analysis = function(){
+	for (x in 2:5){
+  	rs[,x] = substr(rs[,x],3,6) 
+ 	cs[,x] = substr(cs[,x],3,6)}
+	rs[(!rs[,2] %in% type5),2] = 'others'
+	rs[(!rs[,4] %in% type5),4] = 'others'
+	rs[(!rs[,3] %in% type3),3] = 'others'
+	rs[(!rs[,5] %in% type3),5] = 'others'
+	cs[(!cs[,2] %in% type5),2] = 'others'
+	cs[(!cs[,4] %in% type5),4] = 'others'
+	cs[(!cs[,3] %in% type3),3] = 'others'
+	cs[(!cs[,5] %in% type3),5] = 'others'
+	out = data.frame(type3=type3,type5=type5)
+	out$rand_up5 = sapply(type5,function(x) sum(rs[,2]==x)/length(rs[,1]))
+	out$circ_up5 = sapply(type5,function(x) sum(cs[,2]==x)/length(cs[,1]))
+	out$rand_down5 = sapply(type5,function(x) sum(rs[,4]==x)/length(rs[,1]))
+	out$circ_down5 = sapply(type5,function(x) sum(cs[,4]==x)/length(cs[,1]))
+	out$rand_up3 = sapply(type3,function(x) sum(rs[,3]==x)/length(rs[,1]))
+	out$circ_up3 = sapply(type3,function(x) sum(cs[,3]==x)/length(cs[,1]))
+	out$rand_down3 = sapply(type3,function(x) sum(rs[,5]==x)/length(rs[,1]))
+	out$circ_down3 = sapply(type3,function(x) sum(cs[,5]==x)/length(cs[,1]))
+}
+
+cRNA_flanking_intron_repeats = function(channel,database,inevent,inrepeat,in1_repeats,in2_repeats){
+	#sqlQuery(channel,paste("CREATE TABLE ",database,"temp_r1 AS SELECT transc,l_ex-1 AS in_id,chr,strand,in1_s AS `start`,in1_e AS `end` FROM ",database,inevent,' GROUP by transc,in_id',sep=""))
+	sqlQuery(channel,paste("CREATE TABLE ",database,"temp_r2 AS SELECT transc,r_ex AS in_id,chr,strand,in2_s AS `start`,in2_e AS `end` FROM ",database,inevent,' GROUP by transc,in_id',sep=""))	
+	#sqlQuery(channel,paste('ALTER TABLE ',database,'temp_r1 ADD KEY (`chr`,`start`,`end`)',sep=""))
+	sqlQuery(channel,paste('ALTER TABLE ',database,'temp_r2 ADD KEY (`chr`,`start`,`end`)',sep=""))
+	sql1 = sprintf("create table %s%s as SELECT a.transc,a.`in_id`,a.`strand` AS intron_strand,a.`start` AS intron_start,a.`end` AS intron_end,b.* FROM %stemp_r1 a JOIN %s b ON a.`chr`=b.`chr` AND b.`start`>a.`start` AND b.`end`<a.`end`",
+		database,in1_repeats,database,inrepeat)
+	sql2 = sprintf("create table %s%s as SELECT a.transc,a.`in_id`,a.`strand` AS intron_strand,a.`start` AS intron_start,a.`end` AS intron_end,b.* FROM %stemp_r2 a JOIN %s b ON a.`chr`=b.`chr` AND b.`start`>a.`start` AND b.`end`<a.`end`",
+		database,in2_repeats,database,inrepeat)
+	print(sql1)
+	print(sql2)
+	#sqlQuery(channel,sql1)
+	sqlQuery(channel,sql2)
+	#sqlQuery(channel,sprintf("alter table %s%s add key (`transc`,`in_id`,`family`)",database,in1_repeats))
+	sqlQuery(channel,sprintf("alter table %s%s add key (`transc`,`in_id`,`family`)",database,in2_repeats))
+}
+
+

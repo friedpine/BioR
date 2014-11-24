@@ -20,6 +20,25 @@ scatter_corr = function(channel,sample_table,table,s1,s2,col_name,low_cut,filena
 	dev.off()
 }
 
+corr_coef_matrix = function(data,low_cut){
+	samples = colnames(data)
+	counts = length(samples)
+	cormat = matrix(0,nrow=counts,ncol=counts)
+	colnames(cormat) = samples
+	rownames(cormat) = samples
+	for (x in seq(1,counts-1)){
+		print(x)
+		for (y in seq(x+1,counts)){
+			data_exp = data[,c(x,y)]
+			data_nonzero = data_exp[rowSums(data_exp>low_cut)>0,]
+			cormat[x,y] = round(cor(data_nonzero[,1],data_nonzero[,2]),2)
+			cormat[y,x] = cormat[x,y]
+		}
+		cormat[x,x] = 1
+	}
+	cormat[counts,counts] = 1
+	return(cormat)
+}
 
 #USING_LINEAR_REGRESSION_MODEL!
 esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_names,sample_ERCC_counts,filename){
@@ -32,7 +51,7 @@ esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_
 	out = array()
 	print(data_exp_ercc[1,])
 	print(data_exp_mRNA[1,])
-#	pdf(filename)
+	pdf(filename)
 	for (x in 1:length(samples_names)){
 		sample = samples_names[x]
 		ERCC_total = sample_ERCC_counts[x]
@@ -57,11 +76,11 @@ esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_
 		print(sample)
 		print(colSums(new_mRNA))
 		out[x] = colSums(new_mRNA)[3]
-		#print(ggplot(df_ercc_count_exp,aes(log10exp,log10count))+
-		#  geom_point()+
-		#  geom_abline(intercept=model$coefficients[1],slope=model$coefficients[2])+
-		#  labs(title = sample,x="log10(RPKM)",y="log10(Molecular_count)"))		
+		print(ggplot(df_ercc_count_exp,aes(log10exp,log10count))+
+		  geom_point()+
+		  geom_abline(intercept=model$coefficients[1],slope=model$coefficients[2])+
+		  labs(title = sample,x="log10(RPKM)",y="log10(Molecular_count)"))		
 	}
+	dev.off()
 	return(data.frame(sample=samples_names,pred_count=out))
-	#dev.off()
 }
