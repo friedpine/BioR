@@ -44,16 +44,19 @@ corr_coef_matrix = function(data,low_cut){
 esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_names,sample_ERCC_counts,filename){
 	sqlRPKM = paste("select genename,",toString(samples_names,sep=",")," from ",exp_table,sep="")
 	sqlERCC = paste("select * from ",ERCC_detail,sep="")
+	print(sqlRPKM)
 	data_exp = sqlQuery(channel,sqlRPKM)
 	data_ercc = sqlQuery(channel,sqlERCC)
+	print(data_exp[1,])
 	data_exp_ercc = subset(data_exp,genename %in% data_ercc[,1])
 	data_exp_mRNA = subset(data_exp,!(genename %in% data_ercc[,1]))
 	out = array()
+	ERCC_reads = array()
 	print(data_exp_ercc[1,])
-	print(data_exp_mRNA[1,])
 	pdf(filename)
 	for (x in 1:length(samples_names)){
 		sample = samples_names[x]
+		print(sample)
 		ERCC_total = sample_ERCC_counts[x]
 		scale_coeff = ERCC_total/(70000000)
 		exp_ercc = data_exp_ercc[,c(1,x+1)]
@@ -65,15 +68,18 @@ esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_
 		#out[[x]]=df_ercc_count_exp
 		df_ercc_count_exp$log10count = log10(df_ercc_count_exp$count+0.01)
 		df_ercc_count_exp$log10exp = log10(df_ercc_count_exp$exp+0.01)
-		print(scale_coeff)
 		data=subset(df_ercc_count_exp,log10exp>2+log10(scale_coeff)&log10count>4+log10(scale_coeff))
+		print(df_ercc_count_exp[1:10,])
+		print(data[1,])
 		model = lm(log10count~log10exp,data=data)
+
+		#Predicted the whole ERCC genes including the filtered!
 		new_ercc = data.frame(log10exp=df_ercc_count_exp$log10exp)
-		new_mRNA = data.frame(exp=exp_mRNA,log10exp=log10(exp_mRNA+0.01))
 		df_ercc_count_exp$predict = 10**(predict(model, newdata = new_ercc))
+		
+
+		new_mRNA = data.frame(exp=exp_mRNA,log10exp=log10(exp_mRNA+0.01))
 		new_mRNA$predict = 10**(predict(model, newdata = new_mRNA))
-		#print(colSums(df_ercc_count_exp[,2:6]))
-		print(sample)
 		print(colSums(new_mRNA))
 		out[x] = colSums(new_mRNA)[3]
 		print(ggplot(df_ercc_count_exp,aes(log10exp,log10count))+
@@ -83,4 +89,51 @@ esitimate_mole_count_with_ERCC = function(channel,exp_table,ERCC_detail,samples_
 	}
 	dev.off()
 	return(data.frame(sample=samples_names,pred_count=out))
+}
+
+#USING_LINEAR_REGRESSION_MODEL_TO_Predict_circularRNA_molecular_Counts!!!
+esitimate_circ_count_with_ERCC = function(channel,data_exp_mRNA,exp_table,ERCC_detail,samples_names,sample_ERCC_counts,filename){
+	sqlERCC = paste("select * from ",ERCC_detail,sep="")
+	sqlRPKM = paste("select genename,",toString(samples_names,sep=",")," from ",exp_table,sep="")
+	data_ercc = sqlQuery(channel,sqlERCC)
+	data_exp = sqlQuery(channel,sqlRPKM)	
+	data_exp_ercc = subset(data_exp,genename %in% data_ercc[,1])
+
+	out = array()
+	ERCC_reads = array()
+	for (x in 1:length(samples_names)){
+		sample = samples_names[x]
+		print(sample)
+
+		#Prepare circular prediction data!
+		exp_mRNA = data_exp_mRNA[,sample]
+		new_mRNA = data.frame(exp=exp_mRNA,log10exp=log10(exp_mRNA+0.01))
+
+		#ERCC name/Expression level/molecular Counts!!
+		ERCC_total = sample_ERCC_counts[x]
+		scale_coeff = ERCC_total/(70000000)
+		exp_ercc = data_exp_ercc[,c(1,x+1)]
+		
+		count_ercc = data_ercc
+		count_ercc$count = ERCC_total*count_ercc$count
+		df_ercc_count_exp = merge(exp_ercc,count_ercc,by="genename")
+		colnames(df_ercc_count_exp) = c("gene","exp","count")
+		
+		#ERCC expression/counts are log10!!!
+		df_ercc_count_exp$log10count = log10(df_ercc_count_exp$count+0.01)
+		df_ercc_count_exp$log10exp = log10(df_ercc_count_exp$exp+0.01)
+		
+		#Then are subsetted! And linera regression!
+		data=subset(df_ercc_count_exp,log10exp>2+log10(scale_coeff)&log10count>4+log10(scale_coeff))
+		print(df_ercc_count_exp[1:10,])
+		print(data[1,])
+		model = lm(log10count~log10exp,data=data)
+		
+		#Predict the mRNA genes!! 
+		new_mRNA$predict = 10**(predict(model, newdata = new_mRNA))
+		print(colSums(new_mRNA))
+		out[x] = colSums(new_mRNA)[3]
+	}
+	dev.off()
+	return(data.frame(sample=samples_names,pred_circ_count=out))
 }
