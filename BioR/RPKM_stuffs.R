@@ -20,6 +20,33 @@ scatter_corr = function(channel,sample_table,table,s1,s2,col_name,low_cut,filena
 	dev.off()
 }
 
+XPKM_corr_scatter_matrix = function(data,samples1,samples2,low_cut,xlimit,plotfile){
+  samples = colnames(data)
+  counts = length(samples)
+  cormat = matrix(0,nrow=counts,ncol=counts)
+  colnames(cormat) = samples
+  rownames(cormat) = samples
+  pdf(plotfile)
+  for (x in samples1){
+    for (y in samples2){
+      data_exp = data[,c(x,y)]
+      data_nonzero = data_exp[rowSums(data_exp>low_cut)>0,]
+      cormat[x,y] = round(cor(data_nonzero[,1],data_nonzero[,2]),2)
+      cormat[y,x] = cormat[x,y]
+      title_name = paste(samples[x],samples[y],sep="_")
+      print(ggplot(data.frame(x=data_nonzero[,1],y=data_nonzero[,2]),aes(x,y))+
+        geom_point(size=1)+
+        xlim(xlimit[1],xlimit[2])+ylim(xlimit[1],xlimit[2])+
+        labs(title = title_name)
+        )
+    }
+    cormat[x,x] = 1
+  }
+  cormat[counts,counts] = 1
+  dev.off()
+  return(cormat)
+}
+
 corr_coef_matrix = function(data,low_cut){
 	samples = colnames(data)
 	counts = length(samples)

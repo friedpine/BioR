@@ -22,19 +22,57 @@ sample_PCA = function(data,low_cut,low_log2,expressed_cells,dimensions,genes_num
   }
 
 #CLUSTERING_PLOTTING
-sample_cluster_plot = function(PCA_scores,clustering_data,filename){
+sample_cluster_plot_infos = function(PCA_scores,clustering_data,geneID2name,filename){
   library(ggplot2)
   library(gplots)
   pdf(filename)
+
   print(ggplot(PCA_scores,aes(PC1,PC2,color=type))+
     geom_point(size=5))
     print(ggplot(PCA_scores,aes(PC1,PC3,color=type))+
     geom_point(size=5))
     print(ggplot(PCA_scores,aes(PC1,PC4,color=type))+
     geom_point(size=5))
+
   heat_data = as.matrix(clustering_data)
-  dd <- as.dendrogram(hclust(as.dist((1 - cor(t(heat_data)))/2)))
-  heatmap.2(as.matrix(clustering_data),dendrogram="both",
-                  scale="row",density.info='none',Rowv=dd,col=bluered(100),trace='none')
+  dd_gene <- as.dendrogram(hclust(as.dist((1 - cor(t(heat_data)))/2),))
+  dd_gene = reorder(dd_gene,wts=rowMeans(heat_data))
+  order_gene = sapply(cut(dd_gene,0)[[2]],function(x) attr(x,'label'))
+  dd_sample <- as.dendrogram(hclust(dist(t(heat_data),method = "euclidean")))
+  dd_sample = reorder(dd_sample,wts=colMeans(heat_data))
+  order_sample = sapply(cut(dd_sample,0)[[2]],function(x) attr(x,'label'))
+  heatmap.2(heat_data,dendrogram="both",
+          scale="row",density.info='none',Rowv=dd_gene,Colv=dd_sample,col=bluered(100),trace='none')
+  dev.off()
+
+  rownames(geneID2name) = geneID2name$gene
+  outtable = as.data.frame(heat_data[rev(order_gene),order_sample])
+  outtable$gene = rownames(outtable)
+  outtable$genename = geneID2name[outtable$gene,'genename']
+  write.csv(outtable,file=gsub('pdf','csv',filename))
+}
+
+#CLUSTERING_PLOTTING
+sample_cluster_plot = function(PCA_scores,clustering_data,filename){
+  library(ggplot2)
+  library(gplots)
+  pdf(filename)
+
+  print(ggplot(PCA_scores,aes(PC1,PC2,color=type))+
+    geom_point(size=5))
+    print(ggplot(PCA_scores,aes(PC1,PC3,color=type))+
+    geom_point(size=5))
+    print(ggplot(PCA_scores,aes(PC1,PC4,color=type))+
+    geom_point(size=5))
+
+  heat_data = as.matrix(clustering_data)
+  dd_gene <- as.dendrogram(hclust(as.dist((1 - cor(t(heat_data)))/2),))
+  dd_gene = reorder(dd_gene,wts=rowMeans(heat_data))
+  order_gene = sapply(cut(dd_gene,0)[[2]],function(x) attr(x,'label'))
+  dd_sample <- as.dendrogram(hclust(dist(t(heat_data),method = "euclidean")))
+  dd_sample = reorder(dd_sample,wts=colMeans(heat_data))
+  order_sample = sapply(cut(dd_sample,0)[[2]],function(x) attr(x,'label'))
+  heatmap.2(heat_data,dendrogram="both",
+          scale="row",density.info='none',Rowv=dd_gene,Colv=dd_sample,col=bluered(100),trace='none')
   dev.off()
 }

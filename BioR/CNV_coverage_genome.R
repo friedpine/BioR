@@ -138,7 +138,6 @@ plot_norm_malbac_datas = function(data_in,colums_plot,filename){
   dev.off()
 }
 
-
 depth_corr_coef_matrix = function(data,low_cut,xlimit,plotfile){
   samples = colnames(data)
   counts = length(samples)
