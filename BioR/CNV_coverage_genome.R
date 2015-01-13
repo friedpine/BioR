@@ -73,6 +73,9 @@ normalized_by_depth = function(data,infoids,colids){
   norm_factor = diag(length(data[,1])/colSums(data[,colids])) 
   norm_data = as.matrix(data[,colids]) %*% as.matrix(norm_factor)
   colnames(norm_data) = colnames(data)[colids]
+  if(infoids==0){
+    return(as.data.frame(norm_data))
+  }
   return(cbind(data[,infoids],norm_data))
 }
 
