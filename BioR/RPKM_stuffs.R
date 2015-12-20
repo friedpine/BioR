@@ -47,7 +47,7 @@ XPKM_corr_scatter_matrix = function(data,samples1,samples2,low_cut,xlimit,plotfi
   return(cormat)
 }
 
-corr_coef_matrix = function(data,low_cut){
+corr_coef_matrix = function(data,low_cut,mtd){
 	samples = colnames(data)
 	counts = length(samples)
 	cormat = matrix(0,nrow=counts,ncol=counts)
@@ -57,8 +57,8 @@ corr_coef_matrix = function(data,low_cut){
 		print(x)
 		for (y in seq(x+1,counts)){
 			data_exp = data[,c(x,y)]
-			data_nonzero = data_exp[rowSums(data_exp>low_cut)>0,]
-			cormat[x,y] = round(cor(data_nonzero[,1],data_nonzero[,2]),2)
+			data_nonzero = data_exp[rowSums(data_exp>low_cut)>1,]
+			cormat[x,y] = round(cor(data_nonzero[,1],data_nonzero[,2],method = mtd),2)
 			cormat[y,x] = cormat[x,y]
 		}
 		cormat[x,x] = 1

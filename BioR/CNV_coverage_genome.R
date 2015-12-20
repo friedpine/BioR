@@ -169,7 +169,7 @@ depth_corr_coef_matrix = function(data,low_cut,xlimit,plotfile){
   return(cormat)
 }
 
-whole_genome_multisamples = function(depth,species,binsize,ymax,controls,bings){
+whole_genome_multisamples = function(depth,species,binsize,ymax,controls,bings,sexfactor){
   library(data.table)
   depth = data.table(depth);
   depth$bin_id = as.integer(depth$bin_id/binsize);
@@ -207,17 +207,17 @@ whole_genome_multisamples = function(depth,species,binsize,ymax,controls,bings){
   }
  
   out$chr=factor(out$chr,levels=chrs);
+  out = out[order(out$chr),]
  
   out$x=1:length(out[,1]);
   out_col_length = length(colnames(out));
   print(out_col_length);
  
-  #out[out$chr=='chrX',3:(out_col_length-1)]=out[out$chr=='chrX',3:(out_col_length-1)]/2;
-  #out[out$chr=='chrY',3:(out_col_length-1)]=out[out$chr=='chrY',3:(out_col_length-1)]/2;
+  out[out$chr=='chrX',3:(out_col_length-1)]=out[out$chr=='chrX',3:(out_col_length-1)]*(sexfactor[1]/2);
+  out[out$chr=='chrY',3:(out_col_length-1)]=out[out$chr=='chrY',3:(out_col_length-1)]*(sexfactor[2]/2);
  
   out1 = out[,c(out_col_length,3:(out_col_length-1))]
   df_out = melt(out1,'x');
- 
  
   print(out1[1,]);
   print(df_out[1,]);
@@ -247,7 +247,87 @@ whole_genome_multisamples = function(depth,species,binsize,ymax,controls,bings){
                                   linetype="solid"));
  
   print(p1);
+  return(df_out);
 }
+
+
+whole_genome_multisamples_segs = function(depth,species,binsize,ymax,controls,bings,sexfactor){
+  library(data.table)
+  depth = data.table(depth);
+  depth$bin_id = as.integer(depth$bin_id/binsize);
+  depth=depth[, lapply(.SD, sum), by = list(chr,bin_id)];
+  depth = as.data.frame(depth);
+  
+  out = depth[,c('chr','bin_id',bings)];
+  print(out[1,]);
+  print(length(out[,1]));
+  
+  depth = data.table(depth);
+  depth$bin_id = as.integer(depth$bin_id/size);
+  depth=depth[, lapply(.SD, mean), by = list(chr,bin_id)];
+  depth = as.data.frame(depth);
+  
+  depth$pos = 1:length(depth$bin_id)
+  print(depth[1,])
+  
+  df_plot = melt(depth[,c("pos",samples)],"pos")
+  
+  for(x in 1:length(bings)){
+    temp = out[,bings[x]]
+    out[temp>ymax,bings[x]] = ymax
+  }
+  
+  if(species=='hg19'){
+    chrs = c("chr1", "chr2",  "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10",
+             "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19","chr20", "chr21", "chr22", "chrX", "chrY");
+  }
+  
+  if(species=='mm10'){
+    chrs = c("chr1", "chr2",  "chr3", "chr4", "chr5", "chr6", "chr7", "chr8", "chr9", "chr10",
+             "chr11", "chr12", "chr13", "chr14", "chr15", "chr16", "chr17", "chr18", "chr19","chrX", "chrY");
+  }
+  
+  out$chr=factor(out$chr,levels=chrs);
+  out = out[order(out$chr),]
+  
+  out$x=1:length(out[,1]);
+  out_col_length = length(colnames(out));
+  print(out_col_length);
+  
+  out[out$chr=='chrX',3:(out_col_length-1)]=out[out$chr=='chrX',3:(out_col_length-1)]*(sexfactor[1]/2);
+  out[out$chr=='chrY',3:(out_col_length-1)]=out[out$chr=='chrY',3:(out_col_length-1)]*(sexfactor[2]/2);
+  
+  out1 = out[,c(out_col_length,3:(out_col_length-1))]
+  df_out = melt(out1,'x');
+  
+  df_rect = ddply(out[,c(1:2,out_col_length)],.(chr),summarise,mm=min(x),ma=max(x));
+  df_rect$c = as.factor((1:length(chrs)) %%2);
+  print(df_rect);
+  
+  p1 = ggplot(df_out,aes(x=x,y=value));
+  
+  for (x in seq(1,length(df_rect[,1]),2)){
+    p1 = p1+geom_rect(xmin=df_rect[x,'mm'],xmax=df_rect[x,'ma'],ymin=0,ymax=4,fill='gray83',alpha=0.1)
+  }
+  
+  p1 = p1+geom_point(size=1)+
+    facet_grid(variable ~ .) +
+    geom_abline(intercept = 2, slope = 0)+
+    xlim(1,max(df_out$x))+
+    ylim(0,ymax)+
+    theme(
+      panel.grid.minor = element_blank(),
+      panel.grid.major = element_blank(),
+      panel.background = element_blank(),
+      plot.background = element_blank(),
+      panel.border = element_rect(fill=NA,color="black", size=0.5,
+                                  linetype="solid"));
+  
+  print(p1);
+  return(df_out);
+}
+
+
 
 
 

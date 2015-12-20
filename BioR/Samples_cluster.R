@@ -18,11 +18,11 @@ sample_PCA = function(data,low_cut,low_log2,expressed_cells,dimensions,genes_num
                                       rownames(dim2[order(abs(dim2$quanti.correlation),decreasing=T)[1:genes_numbers],]),
                                       rownames(dim3[order(abs(dim3$quanti.correlation),decreasing=T)[1:genes_numbers],]),
                                       rownames(dim4[order(abs(dim4$quanti.correlation),decreasing=T)[1:genes_numbers],])))  
-  return(list(genes=data.exp.log2[high_loading_genes,],score=df_PCA_score))
+  return(list(genes=data.exp.log2[high_loading_genes,],score=df_PCA_score,eig=PCA1$eig))
   }
 
 #CLUSTERING_PLOTTING
-sample_cluster_plot_infos = function(PCA_scores,clustering_data,geneID2name,filename){
+sample_cluster_plot_infos = function(PCA_scores,clustering_data,filename){
   library(ggplot2)
   library(gplots)
   pdf(filename)
@@ -45,11 +45,12 @@ sample_cluster_plot_infos = function(PCA_scores,clustering_data,geneID2name,file
           scale="row",density.info='none',Rowv=dd_gene,Colv=dd_sample,col=bluered(100),trace='none')
   dev.off()
 
-  rownames(geneID2name) = geneID2name$gene
+  #rownames(geneID2name) = geneID2name$gene
   outtable = as.data.frame(heat_data[rev(order_gene),order_sample])
-  outtable$gene = rownames(outtable)
-  outtable$genename = geneID2name[outtable$gene,'genename']
+  #outtable$gene = rownames(outtable)
+  #outtable$genename = geneID2name[outtable$gene,'genename']
   write.csv(outtable,file=gsub('pdf','csv',filename))
+  return(dd_gene)
 }
 
 #CLUSTERING_PLOTTING
